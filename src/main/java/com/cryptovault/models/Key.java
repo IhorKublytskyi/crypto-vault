@@ -38,7 +38,7 @@ public class Key {
     @Enumerated(EnumType.STRING)
     private KeyType type;
 
-    @NotBlank
+    @NotNull
     @Column(nullable = false, length = 50)
     @Enumerated(EnumType.STRING)
     private Algorithm algorithm;
