@@ -41,10 +41,6 @@ build/
 keys/
 secrets/
 
-# === APPLICATION CONFIG ===
-application-local.properties
-application-dev.properties
-application-prod.properties
 *.env
 .env.*
 
