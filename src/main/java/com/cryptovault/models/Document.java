@@ -39,6 +39,10 @@ public class Document {
     @Column(nullable = false, length = 64)
     private String tag;
 
+    @Lob
+    @Column(name = "wrapped_key", nullable = false, columnDefinition = "TEXT")
+    private String wrappedKey;
+
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "key_id", nullable = false)
