@@ -5,6 +5,7 @@ import com.cryptovault.models.Key;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,8 +21,8 @@ import java.util.stream.Collectors;
 @Tag(name = "Key", description = "Endpoints for managing cryptographic keys (AES, RSA)")
 @RequestMapping("/keys")
 @RestController
-
 public class KeyController {
+
     private static final Logger logger = LoggerFactory.getLogger(KeyController.class);
     private final IKeyService keyService;
 
@@ -29,27 +30,23 @@ public class KeyController {
         this.keyService = keyService;
     }
 
-    //POST keys/generate
-    @Operation(
-            summary = "Generate a new cryptographic key",
-            description = "Generates a new AES-256-GCM or RSA key for the specified user"
-    )
-    @ApiResponse(responseCode = "201", description = "Key generated successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid input parameters")
-    @ApiResponse(responseCode = "404", description = "User not found")
+    @Operation(summary = "Generate a new cryptographic key", description = "Generates a new AES-256-GCM or RSA key pair for the specified user.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Key generated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input parameters (unknown algorithm or type)"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error during key generation")
+    })
     @PostMapping("/generate")
     public ResponseEntity<?> generateKey(
-            @Parameter(description = "User ID", required = true)
-            @RequestParam("userId") Long userId,
+            @Parameter(description = "ID of the user who will own the key", required = true) @RequestParam("userId") Long userId,
 
-            @Parameter(description = "Key type: AES or RSA", required = true)
-            @RequestParam("keyType") String keyType,
+            @Parameter(description = "Type of key: 'AES' or 'RSA'", required = true) @RequestParam("keyType") String keyType,
 
-            @Parameter(description = "Algorithm (for RSA: RSA_2048_OAEP or RSA_3072_OAEP)")
-            @RequestParam(value = "algorithm", required = false) String algorithm) {
+            @Parameter(description = "Specific algorithm (Required for RSA: RSA_2048_OAEP or RSA_3072_OAEP)") @RequestParam(value = "algorithm", required = false) String algorithm) {
 
         try {
-            logger.info("Generating {} key for user: {}", keyType, userId);
+            logger.info("Request to generate {} key for user: {}", keyType, userId);
 
             Key savedKey;
             if ("AES".equalsIgnoreCase(keyType)) {
@@ -99,17 +96,15 @@ public class KeyController {
         }
     }
 
-    //GET /keys
-    @Operation(
-            summary = "Get all keys for a user",
-            description = "Returns a list of all cryptographic keys belonging to the specified user"
-    )
-    @ApiResponse(responseCode = "200", description = "Keys retrieved successfully")
-    @ApiResponse(responseCode = "404", description = "User not found")
+    @Operation(summary = "Get all keys for a user", description = "Retrieves a list of all cryptographic keys belonging to the specified user ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Keys retrieved successfully"),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @GetMapping
     public ResponseEntity<?> getKeys(
-            @Parameter(description = "User ID", required = true)
-            @RequestParam("userId") Long userId) {
+            @Parameter(description = "ID of the user", required = true) @RequestParam("userId") Long userId) {
 
         try {
             logger.info("Fetching keys for user: {}", userId);
@@ -122,7 +117,7 @@ public class KeyController {
                 keyInfo.put("type", key.getType());
                 keyInfo.put("algorithm", key.getAlgorithm());
                 keyInfo.put("created_at", key.getCreatedAt());
-                keyInfo.put("documents_count", key.getDocuments().size());
+                keyInfo.put("documents_count", key.getDocuments() != null ? key.getDocuments().size() : 0);
 
                 if (key.getType() == Key.KeyType.RSA) {
                     keyInfo.put("public_key", key.getPublicKeyData());
@@ -147,22 +142,18 @@ public class KeyController {
         }
     }
 
-    // DELETE /keys/{id}
-
-    @Operation(
-            summary = "Delete a cryptographic key",
-            description = "Deletes a key if it is not used by any documents"
-    )
-    @ApiResponse(responseCode = "200", description = "Key deleted successfully")
-    @ApiResponse(responseCode = "404", description = "Key not found")
-    @ApiResponse(responseCode = "409", description = "Key is in use and cannot be deleted")
+    @Operation(summary = "Delete a cryptographic key", description = "Deletes a key by ID. Fails if the key is currently encrypting any documents.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Key deleted successfully"),
+            @ApiResponse(responseCode = "404", description = "Key not found"),
+            @ApiResponse(responseCode = "409", description = "Key is in use (Conflict)"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @DeleteMapping("/{keyId}")
     public ResponseEntity<?> deleteKey(
-            @Parameter(description = "Key ID to delete", required = true)
-            @PathVariable Long keyId,
+            @Parameter(description = "ID of the key to delete", required = true) @PathVariable Long keyId,
 
-            @Parameter(description = "User ID", required = true)
-            @RequestParam("userId") Long userId) {
+            @Parameter(description = "ID of the user owning the key", required = true) @RequestParam("userId") Long userId) {
 
         try {
             logger.info("Attempting to delete key: {} for user: {}", keyId, userId);
@@ -199,5 +190,4 @@ public class KeyController {
         error.put("error", message);
         return error;
     }
-
 }

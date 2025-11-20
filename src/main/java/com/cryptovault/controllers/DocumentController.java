@@ -5,6 +5,7 @@ import com.cryptovault.models.Document;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +26,7 @@ import java.util.Map;
 public class DocumentController {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentController.class);
-    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+    private static final long MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB limit
 
     private final IDocumentService documentService;
 
@@ -33,20 +34,18 @@ public class DocumentController {
         this.documentService = documentService;
     }
 
-    @Operation(
-            summary = "Encrypt a document",
-            description = "Encrypts a document using AES-256-GCM with RSA envelope encryption"
-    )
-    @ApiResponse(responseCode = "201", description = "Document encrypted successfully")
-    @ApiResponse(responseCode = "400", description = "Invalid input or file too large")
-    @ApiResponse(responseCode = "404", description = "Key not found")
+    @Operation(summary = "Encrypt a document", description = "Uploads a file and encrypts it using AES-256-GCM. Requires a Key ID (RSA envelope).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Document encrypted successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid input (empty file or size exceeded)"),
+            @ApiResponse(responseCode = "404", description = "Encryption key not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error during encryption")
+    })
     @PostMapping(value = "/encrypt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> encrypt(
-            @Parameter(description = "File to encrypt", required = true)
-            @RequestParam("file") MultipartFile file,
+            @Parameter(description = "File to be encrypted (max 50MB)", required = true) @RequestParam("file") MultipartFile file,
 
-            @Parameter(description = "RSA Key ID for envelope encryption", required = true)
-            @RequestParam("keyId") Long keyId) {
+            @Parameter(description = "ID of the Key to use for encryption", required = true) @RequestParam("keyId") Long keyId) {
 
         try {
             if (file.isEmpty()) {
@@ -55,8 +54,7 @@ public class DocumentController {
 
             if (file.getSize() > MAX_FILE_SIZE) {
                 return ResponseEntity.badRequest().body(
-                        createErrorResponse("File size exceeds maximum allowed size of 50 MB")
-                );
+                        createErrorResponse("File size exceeds maximum allowed size of 50 MB"));
             }
 
             logger.info("Encrypting file: {} (size: {} bytes) with keyId: {}",
@@ -67,8 +65,7 @@ public class DocumentController {
                     fileBytes,
                     keyId,
                     file.getOriginalFilename(),
-                    file.getContentType()
-            );
+                    file.getContentType());
 
             logger.info("File encrypted successfully. Document ID: {}", savedDocument.getId());
 
@@ -97,23 +94,20 @@ public class DocumentController {
         }
     }
 
-    @Operation(
-            summary = "Decrypt a document",
-            description = "Decrypts a previously encrypted document and returns the original file"
-    )
-    @ApiResponse(responseCode = "200", description = "Document decrypted successfully")
-    @ApiResponse(responseCode = "404", description = "Document not found")
-    @ApiResponse(responseCode = "500", description = "Decryption failed")
+    @Operation(summary = "Decrypt a document", description = "Decrypts a document by its ID and returns the original file stream.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Document decrypted successfully"),
+            @ApiResponse(responseCode = "404", description = "Document not found"),
+            @ApiResponse(responseCode = "500", description = "Internal server error during decryption")
+    })
     @GetMapping(value = "/decrypt/{documentId}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<?> decrypt(
-            @Parameter(description = "Document ID", required = true)
-            @PathVariable Long documentId) {
+            @Parameter(description = "ID of the document to decrypt", required = true) @PathVariable Long documentId) {
 
         try {
             logger.info("Decrypting document with ID: {}", documentId);
 
             Resource resource = documentService.DecryptFile(documentId);
-
             String filename = "decrypted_document_" + documentId;
 
             logger.info("Document decrypted successfully. Document ID: {}", documentId);
@@ -138,7 +132,7 @@ public class DocumentController {
         }
     }
 
-    @Operation(summary = "Health check", description = "Simple health check endpoint")
+    @Operation(summary = "Health check", description = "Checks if the service is running")
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
         Map<String, String> response = new HashMap<>();
