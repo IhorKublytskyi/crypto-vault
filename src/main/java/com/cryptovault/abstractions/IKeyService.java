@@ -7,6 +7,7 @@ import javax.crypto.SecretKey;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.Map;
 
 public interface IKeyService {
     SecretKey generateAesKey() throws NoSuchAlgorithmException;
@@ -18,4 +19,5 @@ public interface IKeyService {
     List<Key> getKeysByUserId(Long userId);
     Key getKeyByIdAndUserId(Long keyId, Long userId);
     void deleteKey(Long keyId, Long userId);
+    Map<String, Object> getKeyStatistics(Long userId);
 }

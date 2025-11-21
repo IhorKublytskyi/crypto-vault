@@ -2,16 +2,22 @@ package com.cryptovault.controllers;
 
 import com.cryptovault.abstractions.IKeyService;
 import com.cryptovault.models.Key;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -199,5 +205,84 @@ public class KeyController {
         error.put("error", message);
         return error;
     }
+
+    //GET /keys/report
+    @Operation(
+            summary = "Generate Excel report with key statistics",
+            description = "Generates and downloads an Excel report containing key statistics for the specified user"
+    )
+    @ApiResponse(responseCode = "200", description = "Report generated successfully")
+    @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "500", description = "Report generation failed")
+    @GetMapping("/report")
+    public ResponseEntity<?> generateKeyReport(
+            @Parameter(description = "User ID", required = true)
+            @RequestParam("userId") Long userId) {
+
+        try {
+            logger.info("Generating key statistics report for user: {}", userId);
+
+            Map<String, Object> stats = keyService.getKeyStatistics(userId);
+
+            List<Map<String, Object>> keysDetailsList = ((List<Key>) stats.get("keys_details"))
+                    .stream()
+                    .map(key -> {
+                        Map<String, Object> keyMap = new HashMap<>();
+                        keyMap.put("id", key.getId());
+                        keyMap.put("type", key.getType().toString());
+                        keyMap.put("algorithm", key.getAlgorithm().toString());
+                        keyMap.put("documents", key.getDocuments());
+                        keyMap.put("createdAt", key.getCreatedAt().toString());
+                        return keyMap;
+                    })
+                    .collect(Collectors.toList());
+
+            stats.put("keys_details", keysDetailsList);
+            ObjectMapper mapper = new ObjectMapper();
+            String statsJson = mapper.writeValueAsString(stats);
+
+            String filename = "key_statistics_user_" + userId + "_" + System.currentTimeMillis() + ".xlsx";
+            String outputPath = "/tmp/" + filename;
+
+            ProcessBuilder pb = new ProcessBuilder(
+                    "python3",
+                    "src/main/java/com/cryptovault/resources/scripts/generate_key_report.py",
+                    statsJson,
+                    outputPath
+            );
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                throw new RuntimeException("Report generation script failed with exit code: " + exitCode);
+            }
+
+            File reportFile = new File(outputPath);
+            if (!reportFile.exists()) {
+                throw new RuntimeException("Report file was not generated");
+            }
+
+            Resource resource = new FileSystemResource(reportFile);
+
+            logger.info("Report generated successfully for user: {}", userId);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(resource);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("User not found: {}", userId, e);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(createErrorResponse("User not found with id: " + userId));
+
+        } catch (Exception e) {
+            logger.error("Error generating report for user: {}", userId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("Report generation failed: " + e.getMessage()));
+        }
+    }
+
 
 }

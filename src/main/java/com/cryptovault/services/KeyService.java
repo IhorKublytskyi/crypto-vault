@@ -13,7 +13,9 @@ import javax.crypto.SecretKey;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 @Service
@@ -96,6 +98,29 @@ public class KeyService implements IKeyService {
                     "Cannot delete key: it is used by " + key.getDocuments().size() + " document(s)");
         }
         _repository.delete(key);
+    }
+
+    public Map<String, Object> getKeyStatistics(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
+
+        List<Key> allKeys = _repository.findByUserId(userId);
+
+        long totalKeys = allKeys.size();
+        long aesKeys = allKeys.stream().filter(k -> k.getType() == Key.KeyType.AES).count();
+        long rsaKeys = allKeys.stream().filter(k -> k.getType() == Key.KeyType.RSA).count();
+        long totalDocuments = allKeys.stream().mapToLong(k -> k.getDocuments().size()).sum();
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("user_id", userId);
+        stats.put("username", user.getUsername());
+        stats.put("total_keys", totalKeys);
+        stats.put("aes_keys", aesKeys);
+        stats.put("rsa_keys", rsaKeys);
+        stats.put("total_documents", totalDocuments);
+        stats.put("keys_details", allKeys);
+
+        return stats;
     }
 
 }
