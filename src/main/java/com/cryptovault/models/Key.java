@@ -6,18 +6,17 @@ import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-
 @Entity
-@Table(name = "keys",
-        indexes = {
-                @Index(name = "idx_key_user", columnList = "user_id"),
-                @Index(name = "idx_key_type_algo", columnList = "type, algorithm")
-        })
+@Table(name = "keys", indexes = {
+        @Index(name = "idx_key_user", columnList = "user_id"),
+        @Index(name = "idx_key_type_algo", columnList = "type, algorithm")
+})
 
 @Data
 @NoArgsConstructor
@@ -31,6 +30,7 @@ public class Key {
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
 
     @NotNull
@@ -43,7 +43,7 @@ public class Key {
     @Enumerated(EnumType.STRING)
     private Algorithm algorithm;
 
-    @Lob //Large object
+    @Lob // Large object
     @Column(name = "key_data", nullable = false, columnDefinition = "TEXT")
     private String keyData;
 
@@ -61,6 +61,7 @@ public class Key {
     }
 
     @OneToMany(mappedBy = "key", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Document> documents = new ArrayList<>();
 
     public enum KeyType {
