@@ -43,6 +43,7 @@ public class KeyController {
     @ApiResponse(responseCode = "201", description = "Key generated successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "500", description = "Internal server error during key generation")
     @PostMapping("/generate")
     public ResponseEntity<?> generateKey(
             @Parameter(description = "User ID", required = true)
@@ -112,6 +113,7 @@ public class KeyController {
     )
     @ApiResponse(responseCode = "200", description = "Keys retrieved successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
+    @ApiResponse(responseCode = "500", description = "Internal server error")
     @GetMapping
     public ResponseEntity<?> getKeys(
             @Parameter(description = "User ID", required = true)
@@ -128,7 +130,7 @@ public class KeyController {
                 keyInfo.put("type", key.getType());
                 keyInfo.put("algorithm", key.getAlgorithm());
                 keyInfo.put("created_at", key.getCreatedAt());
-                keyInfo.put("documents_count", key.getDocuments().size());
+                keyInfo.put("documents_count", key.getDocuments() != null ? key.getDocuments().size() : 0);
 
                 if (key.getType() == Key.KeyType.RSA) {
                     keyInfo.put("public_key", key.getPublicKeyData());
@@ -162,6 +164,7 @@ public class KeyController {
     @ApiResponse(responseCode = "200", description = "Key deleted successfully")
     @ApiResponse(responseCode = "404", description = "Key not found")
     @ApiResponse(responseCode = "409", description = "Key is in use and cannot be deleted")
+    @ApiResponse(responseCode = "500", description = "Internal server error")
     @DeleteMapping("/{keyId}")
     public ResponseEntity<?> deleteKey(
             @Parameter(description = "Key ID to delete", required = true)
