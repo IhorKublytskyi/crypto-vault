@@ -1,7 +1,7 @@
 package com.cryptovault.utils;
 
 import com.cryptovault.datatransferobjects.EncryptedData;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -14,100 +14,100 @@ import java.security.*;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Arrays;
 
-@Configuration
+@Component
 public class CryptoUtils {
 
-    private final SecureRandom secureRandom = new SecureRandom();
+    private static final String AES_ALGO = "AES";
+    private static final String AES_TRANSFORMATION = "AES/GCM/NoPadding";
 
-    public SecretKey generateAesKey() throws NoSuchAlgorithmException{
-        KeyGenerator generator = KeyGenerator.getInstance(CryptoUtilsConstants.AES_ALGORITHM);
+    private static final String RSA_TRANSFORMATION = "RSA/ECB/OAEPPadding";
 
-        generator.init(CryptoUtilsConstants.AES_KEY_SIZE, secureRandom);
+    private static final int AES_KEY_SIZE = 256;
+    private static final int GCM_IV_LENGTH = 12; // 12 байт (96 бит) - стандарт для GCM
+    private static final int GCM_TAG_LENGTH = 128; // 128 бит
+    private static final int RSA_KEY_SIZE = 3072;
 
-        return generator.generateKey();
+    public SecretKey generateAesKey() throws NoSuchAlgorithmException {
+        KeyGenerator keyGen = KeyGenerator.getInstance(AES_ALGO);
+        keyGen.init(AES_KEY_SIZE);
+        return keyGen.generateKey();
+    }
+
+    public EncryptedData encryptAES(byte[] plaintext, SecretKey key) throws Exception {
+        byte[] iv = new byte[GCM_IV_LENGTH];
+        new SecureRandom().nextBytes(iv);
+
+        Cipher cipher = Cipher.getInstance(AES_TRANSFORMATION);
+        GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+        cipher.init(Cipher.ENCRYPT_MODE, key, spec);
+
+        byte[] cipherTextWithTag = cipher.doFinal(plaintext);
+
+        int tagLengthBytes = GCM_TAG_LENGTH / 8;
+        int cipherTextLength = cipherTextWithTag.length - tagLengthBytes;
+
+        byte[] actualCipherText = Arrays.copyOfRange(cipherTextWithTag, 0, cipherTextLength);
+        byte[] tag = Arrays.copyOfRange(cipherTextWithTag, cipherTextLength, cipherTextWithTag.length);
+
+        return new EncryptedData(actualCipherText, iv, tag);
+    }
+
+    public byte[] decryptAES(byte[] cipherText, byte[] iv, byte[] tag, SecretKey key) throws Exception {
+        Cipher cipher = Cipher.getInstance(AES_TRANSFORMATION);
+        GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
+        cipher.init(Cipher.DECRYPT_MODE, key, spec);
+
+        byte[] cipherTextWithTag = new byte[cipherText.length + tag.length];
+        System.arraycopy(cipherText, 0, cipherTextWithTag, 0, cipherText.length);
+        System.arraycopy(tag, 0, cipherTextWithTag, cipherText.length, tag.length);
+
+        return cipher.doFinal(cipherTextWithTag);
     }
 
     public KeyPair generateRsaKeyPair() throws NoSuchAlgorithmException {
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance(CryptoUtilsConstants.RSA_ALGORITHM);
-
-        keyGen.initialize(CryptoUtilsConstants.RSA_KEY_SIZE, secureRandom);
-
+        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+        keyGen.initialize(RSA_KEY_SIZE);
         return keyGen.generateKeyPair();
     }
 
     public PublicKey getPublicKeyFromBytes(byte[] keyBytes) throws Exception {
-        KeyFactory kf = KeyFactory.getInstance(CryptoUtilsConstants.RSA_ALGORITHM);
-        return kf.generatePublic(new X509EncodedKeySpec(keyBytes));
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePublic(spec);
     }
 
     public PrivateKey getPrivateKeyFromBytes(byte[] keyBytes) throws Exception {
-        KeyFactory kf = KeyFactory.getInstance(CryptoUtilsConstants.RSA_ALGORITHM);
-        return kf.generatePrivate(new PKCS8EncodedKeySpec(keyBytes));
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePrivate(spec);
     }
 
-    public EncryptedData encryptAES(byte[] bytes, SecretKey key) throws Exception{
-        byte[] iv = new byte[CryptoUtilsConstants.GCM_IV_LENGTH];
+    public byte[] wrapKey(byte[] keyBytesToWrap, PublicKey publicKey) throws Exception {
+        Cipher cipher = Cipher.getInstance(RSA_TRANSFORMATION);
+        OAEPParameterSpec oaepParams = new OAEPParameterSpec(
+                "SHA-256",
+                "MGF1",
+                new MGF1ParameterSpec("SHA-256"),
+                PSource.PSpecified.DEFAULT
+        );
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey, oaepParams);
 
-        secureRandom.nextBytes(iv);
-
-        GCMParameterSpec gcm = new GCMParameterSpec(CryptoUtilsConstants.GCM_TAG_LENGTH, iv);
-
-        Cipher cipher = Cipher.getInstance(CryptoUtilsConstants.AES_GCM_TRANSFORM);
-
-        cipher.init(Cipher.ENCRYPT_MODE, key, gcm);
-
-        byte[] ciphertextWithTag = cipher.doFinal(bytes);
-
-        int tagLengthBytes = CryptoUtilsConstants.GCM_TAG_LENGTH / 8;
-        int ciphertextLength = ciphertextWithTag.length - tagLengthBytes;
-
-        byte[] ciphertext = new byte[ciphertextLength];
-        byte[] tag = new byte[tagLengthBytes];
-
-        System.arraycopy(ciphertextWithTag, 0, ciphertext, 0, ciphertextLength);
-        System.arraycopy(ciphertextWithTag, ciphertextLength, tag, 0, tagLengthBytes);
-
-        return new EncryptedData(ciphertext, iv, tag);
+        return cipher.doFinal(keyBytesToWrap);
     }
 
-    public byte[] decryptAES(byte[] ciphertext, byte[] iv, byte[] tag, SecretKey key) throws Exception{
+    public SecretKey unwrapKey(byte[] wrappedKeyBytes, PrivateKey privateKey) throws Exception {
+        Cipher cipher = Cipher.getInstance(RSA_TRANSFORMATION);
+        OAEPParameterSpec oaepParams = new OAEPParameterSpec(
+                "SHA-256",
+                "MGF1",
+                new MGF1ParameterSpec("SHA-256"),
+                PSource.PSpecified.DEFAULT
+        );
+        cipher.init(Cipher.DECRYPT_MODE, privateKey, oaepParams);
 
-        int tagLengthBytes = CryptoUtilsConstants.GCM_TAG_LENGTH / 8;
-
-        byte[] ciphertextWithTag = new byte[ciphertext.length + tagLengthBytes];
-
-        System.arraycopy(ciphertext, 0, ciphertextWithTag, 0, ciphertext.length);
-        System.arraycopy(tag, 0, ciphertextWithTag, ciphertext.length, tagLengthBytes);
-
-        GCMParameterSpec gcm = new GCMParameterSpec(CryptoUtilsConstants.GCM_TAG_LENGTH, iv);
-
-        Cipher cipher = Cipher.getInstance(CryptoUtilsConstants.AES_GCM_TRANSFORM);
-
-        cipher.init(Cipher.DECRYPT_MODE, key, gcm);
-
-        return cipher.doFinal(ciphertextWithTag);
-    }
-
-    public byte[] wrapKey(byte[] keyBytes, PublicKey rsaPublicKey) throws Exception{
-        Cipher cipher = Cipher.getInstance(CryptoUtilsConstants.RSA_TRANSFORM);
-
-        OAEPParameterSpec oaep = new OAEPParameterSpec("SHA-256", "MFG1", new MGF1ParameterSpec("SHA-256"), PSource.PSpecified.DEFAULT);
-
-        cipher.init(Cipher.ENCRYPT_MODE, rsaPublicKey, oaep);
-
-        return cipher.doFinal(keyBytes);
-    }
-
-    public SecretKey unwrapKey(byte[] wrappedKeyBytes, PrivateKey rsaPrivateKey) throws Exception {
-        Cipher cipher = Cipher.getInstance(CryptoUtilsConstants.RSA_TRANSFORM);
-        OAEPParameterSpec oaep = new OAEPParameterSpec("SHA-256", "MGF1",
-                new MGF1ParameterSpec("SHA-256"), PSource.PSpecified.DEFAULT);
-
-        cipher.init(Cipher.DECRYPT_MODE, rsaPrivateKey, oaep);
-
-        byte[] unwrappedBytes = cipher.doFinal(wrappedKeyBytes);
-
-        return new SecretKeySpec(unwrappedBytes, 0, unwrappedBytes.length, CryptoUtilsConstants.AES_ALGORITHM);
+        byte[] decodedKeyBytes = cipher.doFinal(wrappedKeyBytes);
+        return new SecretKeySpec(decodedKeyBytes, AES_ALGO);
     }
 }
