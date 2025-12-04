@@ -226,21 +226,6 @@ public class KeyController {
             logger.info("Generating key statistics report for user: {}", userId);
 
             Map<String, Object> stats = keyService.getKeyStatistics(userId);
-
-            List<Map<String, Object>> keysDetailsList = ((List<Key>) stats.get("keys_details"))
-                    .stream()
-                    .map(key -> {
-                        Map<String, Object> keyMap = new HashMap<>();
-                        keyMap.put("id", key.getId());
-                        keyMap.put("type", key.getType().toString());
-                        keyMap.put("algorithm", key.getAlgorithm().toString());
-                        keyMap.put("documents", key.getDocuments());
-                        keyMap.put("createdAt", key.getCreatedAt().toString());
-                        return keyMap;
-                    })
-                    .collect(Collectors.toList());
-
-            stats.put("keys_details", keysDetailsList);
             ObjectMapper mapper = new ObjectMapper();
             String statsJson = mapper.writeValueAsString(stats);
 

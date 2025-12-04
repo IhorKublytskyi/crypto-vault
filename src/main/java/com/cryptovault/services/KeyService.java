@@ -16,6 +16,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -111,6 +112,18 @@ public class KeyService implements IKeyService {
         long rsaKeys = allKeys.stream().filter(k -> k.getType() == Key.KeyType.RSA).count();
         long totalDocuments = allKeys.stream().mapToLong(k -> k.getDocuments().size()).sum();
 
+        List<Map<String, Object>> keysDetails = allKeys.stream()
+                .map(key -> {
+                    Map<String, Object> keyMap = new HashMap<>();
+                    keyMap.put("id", key.getId());
+                    keyMap.put("type", key.getType().toString());
+                    keyMap.put("algorithm", key.getAlgorithm().toString());
+                    keyMap.put("documents", key.getDocuments());
+                    keyMap.put("createdAt", key.getCreatedAt().toString()); // LocalDateTime → String
+                    return keyMap;
+                })
+                .collect(Collectors.toList());
+
         Map<String, Object> stats = new HashMap<>();
         stats.put("user_id", userId);
         stats.put("username", user.getUsername());
@@ -118,7 +131,7 @@ public class KeyService implements IKeyService {
         stats.put("aes_keys", aesKeys);
         stats.put("rsa_keys", rsaKeys);
         stats.put("total_documents", totalDocuments);
-        stats.put("keys_details", allKeys);
+        stats.put("keys_details", keysDetails);
 
         return stats;
     }
