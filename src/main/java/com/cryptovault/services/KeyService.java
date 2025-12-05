@@ -2,6 +2,7 @@ package com.cryptovault.services;
 
 import com.cryptovault.abstractions.IKeyRepository;
 import com.cryptovault.abstractions.IKeyService;
+import com.cryptovault.models.Document;
 import com.cryptovault.models.Key;
 import com.cryptovault.models.User;
 import com.cryptovault.repositories.UserRepository;
@@ -118,7 +119,12 @@ public class KeyService implements IKeyService {
                     keyMap.put("id", key.getId());
                     keyMap.put("type", key.getType().toString());
                     keyMap.put("algorithm", key.getAlgorithm().toString());
-                    keyMap.put("documents", key.getDocuments());
+                    List<Long> documentIds = key.getDocuments().stream()
+                            .map(Document::getId)
+                            .collect(Collectors.toList());
+
+                    keyMap.put("documents", documentIds);
+                    keyMap.put("documents_count", key.getDocuments().size());
                     keyMap.put("createdAt", key.getCreatedAt().toString()); // LocalDateTime → String
                     return keyMap;
                 })

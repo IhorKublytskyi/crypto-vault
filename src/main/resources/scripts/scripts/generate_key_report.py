@@ -4,13 +4,16 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from datetime import datetime
 
-def create_key_statistics_report(stats_json, output_file):
+print("PYTHON:", sys.executable)
+
+def create_key_statistics_report(stats_json_file, output_file):
     wb = Workbook()
     ws = wb.active
     ws.title = "Key Statistics"
 
-    # Parse input statistics
-    stats = json.loads(stats_json)
+    # Parse input statistics from the file
+    with open(stats_json_file, 'r', encoding='utf-8') as f:
+        stats = json.load(f)
 
     # Header styling
     header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
@@ -78,7 +81,8 @@ def create_key_statistics_report(stats_json, output_file):
         ws.cell(row=row_num, column=1, value=key.get('id'))
         ws.cell(row=row_num, column=2, value=key.get('type'))
         ws.cell(row=row_num, column=3, value=key.get('algorithm'))
-        ws.cell(row=row_num, column=4, value=len(key.get('documents', [])))
+        documents = key.get('documents', [])
+        ws.cell(row=row_num, column=4, value=len(documents))
         ws.cell(row=row_num, column=5, value=key.get('createdAt', ''))
 
         for col in range(1, 6):
@@ -104,8 +108,8 @@ if __name__ == '__main__':
         print("Usage: python generate_report.py <stats_json> <output_file>")
         sys.exit(1)
 
-    stats_json = sys.argv[1]
+    stats_json_file = sys.argv[1]
     output_file = sys.argv[2]
 
-    create_key_statistics_report(stats_json, output_file)
+    create_key_statistics_report(stats_json_file, output_file)
     print(f"Report generated: {output_file}")

@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -17,7 +18,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +33,15 @@ import java.util.stream.Collectors;
 public class KeyController {
     private static final Logger logger = LoggerFactory.getLogger(KeyController.class);
     private final IKeyService keyService;
+
+    @Value("${cryptovault.scripts.path}")
+    private String scriptsPath;
+
+    @Value("${cryptovault.reports.output.path}")
+    private String reportsOutputPath;
+
+    @Value("${cryptovault.scripts.python.executable:python3}")
+    private String pythonExecutable;
 
     public KeyController(IKeyService keyService) {
         this.keyService = keyService;
@@ -229,20 +241,43 @@ public class KeyController {
             ObjectMapper mapper = new ObjectMapper();
             String statsJson = mapper.writeValueAsString(stats);
 
-            String filename = "key_statistics_user_" + userId + "_" + System.currentTimeMillis() + ".xlsx";
-            String outputPath = "/tmp/" + filename;
+            String tempJsonPath = reportsOutputPath + "/temp_stats_" + userId + "_" + System.currentTimeMillis() + ".json";
+            File tempJsonFile = new File(tempJsonPath);
 
+            File outputDir = new File(reportsOutputPath);
+            if (!outputDir.exists()) {
+                outputDir.mkdirs();
+            }
+
+            try (java.io.FileWriter writer = new java.io.FileWriter(tempJsonFile)) {
+                writer.write(statsJson);
+            }
+
+            String filename = "key_statistics_user_" + userId + "_" + System.currentTimeMillis() + ".xlsx";
+            String outputPath = reportsOutputPath + "/" + filename;
+
+            String scriptPath = scriptsPath + "/generate_key_report.py";
             ProcessBuilder pb = new ProcessBuilder(
-                    "python3",
-                    "src/main/java/com/cryptovault/resources/scripts/generate_key_report.py",
-                    statsJson,
+                    pythonExecutable,
+                    scriptPath,
+                    tempJsonPath,
                     outputPath
             );
             pb.redirectErrorStream(true);
             Process process = pb.start();
+            //output reading for logging
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            StringBuilder output = new StringBuilder();
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+                logger.debug("Python script output: {}", line);
+            }
 
             int exitCode = process.waitFor();
+            tempJsonFile.delete();
             if (exitCode != 0) {
+                logger.error("Script output: {}", output.toString());
                 throw new RuntimeException("Report generation script failed with exit code: " + exitCode);
             }
 
