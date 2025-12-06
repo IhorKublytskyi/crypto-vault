@@ -47,25 +47,19 @@ public class KeyController {
         this.keyService = keyService;
     }
 
-    //POST keys/generate
-    @Operation(
-            summary = "Generate a new cryptographic key",
-            description = "Generates a new AES-256-GCM or RSA key for the specified user"
-    )
+    // POST keys/generate
+    @Operation(summary = "Generate a new cryptographic key", description = "Generates a new AES-256-GCM or RSA key for the specified user")
     @ApiResponse(responseCode = "201", description = "Key generated successfully")
     @ApiResponse(responseCode = "400", description = "Invalid input parameters")
     @ApiResponse(responseCode = "404", description = "User not found")
     @ApiResponse(responseCode = "500", description = "Internal server error during key generation")
     @PostMapping("/generate")
     public ResponseEntity<?> generateKey(
-            @Parameter(description = "User ID", required = true)
-            @RequestParam("userId") Long userId,
+            @Parameter(description = "User ID", required = true) @RequestParam("userId") Long userId,
 
-            @Parameter(description = "Key type: AES or RSA", required = true)
-            @RequestParam("keyType") String keyType,
+            @Parameter(description = "Key type: AES or RSA", required = true) @RequestParam("keyType") String keyType,
 
-            @Parameter(description = "Algorithm (for RSA: RSA_2048_OAEP or RSA_3072_OAEP)")
-            @RequestParam(value = "algorithm", required = false) String algorithm) {
+            @Parameter(description = "Algorithm (for RSA: RSA_2048_OAEP or RSA_3072_OAEP)") @RequestParam(value = "algorithm", required = false) String algorithm) {
 
         try {
             logger.info("Generating {} key for user: {}", keyType, userId);
@@ -118,18 +112,14 @@ public class KeyController {
         }
     }
 
-    //GET /keys
-    @Operation(
-            summary = "Get all keys for a user",
-            description = "Returns a list of all cryptographic keys belonging to the specified user"
-    )
+    // GET /keys
+    @Operation(summary = "Get all keys for a user", description = "Returns a list of all cryptographic keys belonging to the specified user")
     @ApiResponse(responseCode = "200", description = "Keys retrieved successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
     @ApiResponse(responseCode = "500", description = "Internal server error")
     @GetMapping
     public ResponseEntity<?> getKeys(
-            @Parameter(description = "User ID", required = true)
-            @RequestParam("userId") Long userId) {
+            @Parameter(description = "User ID", required = true) @RequestParam("userId") Long userId) {
 
         try {
             logger.info("Fetching keys for user: {}", userId);
@@ -169,21 +159,16 @@ public class KeyController {
 
     // DELETE /keys/{id}
 
-    @Operation(
-            summary = "Delete a cryptographic key",
-            description = "Deletes a key if it is not used by any documents"
-    )
+    @Operation(summary = "Delete a cryptographic key", description = "Deletes a key if it is not used by any documents")
     @ApiResponse(responseCode = "200", description = "Key deleted successfully")
     @ApiResponse(responseCode = "404", description = "Key not found")
     @ApiResponse(responseCode = "409", description = "Key is in use and cannot be deleted")
     @ApiResponse(responseCode = "500", description = "Internal server error")
     @DeleteMapping("/{keyId}")
     public ResponseEntity<?> deleteKey(
-            @Parameter(description = "Key ID to delete", required = true)
-            @PathVariable Long keyId,
+            @Parameter(description = "Key ID to delete", required = true) @PathVariable Long keyId,
 
-            @Parameter(description = "User ID", required = true)
-            @RequestParam("userId") Long userId) {
+            @Parameter(description = "User ID", required = true) @RequestParam("userId") Long userId) {
 
         try {
             logger.info("Attempting to delete key: {} for user: {}", keyId, userId);
@@ -221,18 +206,14 @@ public class KeyController {
         return error;
     }
 
-    //GET /keys/report
-    @Operation(
-            summary = "Generate Excel report with key statistics",
-            description = "Generates and downloads an Excel report containing key statistics for the specified user"
-    )
+    // GET /keys/report
+    @Operation(summary = "Generate Excel report with key statistics", description = "Generates and downloads an Excel report containing key statistics for the specified user")
     @ApiResponse(responseCode = "200", description = "Report generated successfully")
     @ApiResponse(responseCode = "404", description = "User not found")
     @ApiResponse(responseCode = "500", description = "Report generation failed")
     @GetMapping("/report")
     public ResponseEntity<?> generateKeyReport(
-            @Parameter(description = "User ID", required = true)
-            @RequestParam("userId") Long userId) {
+            @Parameter(description = "User ID", required = true) @RequestParam("userId") Long userId) {
 
         try {
             logger.info("Generating key statistics report for user: {}", userId);
@@ -241,7 +222,8 @@ public class KeyController {
             ObjectMapper mapper = new ObjectMapper();
             String statsJson = mapper.writeValueAsString(stats);
 
-            String tempJsonPath = reportsOutputPath + "/temp_stats_" + userId + "_" + System.currentTimeMillis() + ".json";
+            String tempJsonPath = reportsOutputPath + "/temp_stats_" + userId + "_" + System.currentTimeMillis()
+                    + ".json";
             File tempJsonFile = new File(tempJsonPath);
 
             File outputDir = new File(reportsOutputPath);
@@ -261,11 +243,10 @@ public class KeyController {
                     pythonExecutable,
                     scriptPath,
                     tempJsonPath,
-                    outputPath
-            );
+                    outputPath);
             pb.redirectErrorStream(true);
             Process process = pb.start();
-            //output reading for logging
+            // output reading for logging
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             StringBuilder output = new StringBuilder();
@@ -292,7 +273,8 @@ public class KeyController {
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .contentType(MediaType
+                            .parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                     .body(resource);
 
         } catch (IllegalArgumentException e) {
@@ -306,6 +288,5 @@ public class KeyController {
                     .body(createErrorResponse("Report generation failed: " + e.getMessage()));
         }
     }
-
 
 }

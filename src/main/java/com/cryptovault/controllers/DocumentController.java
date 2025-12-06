@@ -6,6 +6,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +38,7 @@ public class DocumentController {
 
     @Operation(summary = "Encrypt a document", description = "Uploads a file and encrypts it using AES-256-GCM. Requires a Key ID (RSA envelope).")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Document encrypted successfully"),
+            @ApiResponse(responseCode = "201", description = "Document encrypted successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Document.class))),
             @ApiResponse(responseCode = "400", description = "Invalid input (empty file or size exceeded)"),
             @ApiResponse(responseCode = "404", description = "Encryption key not found"),
             @ApiResponse(responseCode = "500", description = "Internal server error during encryption")
