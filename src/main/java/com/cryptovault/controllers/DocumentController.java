@@ -108,10 +108,13 @@ public class DocumentController {
 
         try {
             logger.info("Decrypting document with ID: {}", documentId);
+            Document document = documentService.getDocumentById(documentId);
 
             Resource resource = documentService.DecryptFile(documentId);
-            String filename = "decrypted_document_" + documentId;
-
+            String filename = document.getFilename();
+            String contentType = document.getContentType() != null
+                    ? document.getContentType()
+                    : MediaType.APPLICATION_OCTET_STREAM_VALUE;
             logger.info("Document decrypted successfully. Document ID: {}", documentId);
 
             return ResponseEntity.ok()

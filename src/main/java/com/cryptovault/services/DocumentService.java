@@ -119,4 +119,10 @@ public class DocumentService implements IDocumentService {
         }
         return sb.toString();
     }
+
+    @Override
+    public Document getDocumentById(Long documentId) {
+        return documentRepository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found with id: " + documentId));
+    }
 }
