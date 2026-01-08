@@ -18,7 +18,7 @@ public class TimeSchedulerService {
     private final SimpMessagingTemplate messagingTemplate;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Scheduled(fixedRate = 1000)
+    @Scheduled(fixedRate = 60000)
     public void fetchAndBroadcastTime() {
         String url = "http://worldtimeapi.org/api/timezone/Europe/Warsaw";
 
