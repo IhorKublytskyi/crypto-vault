@@ -25,8 +25,8 @@ public class CryptoUtils {
     private static final String RSA_TRANSFORMATION = "RSA/ECB/OAEPPadding";
 
     private static final int AES_KEY_SIZE = 256;
-    private static final int GCM_IV_LENGTH = 12; // 12 байт (96 бит) - стандарт для GCM
-    private static final int GCM_TAG_LENGTH = 128; // 128 бит
+    private static final int GCM_IV_LENGTH = 12;
+    private static final int GCM_TAG_LENGTH = 128;
     private static final int RSA_KEY_SIZE = 3072;
 
     public SecretKey generateAesKey() throws NoSuchAlgorithmException {

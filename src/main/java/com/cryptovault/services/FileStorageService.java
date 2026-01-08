@@ -44,7 +44,7 @@ public class FileStorageService implements IFileStorageService {
         try {
             Files.write(filePath, data, StandardOpenOption.CREATE_NEW);
             logger.debug("Saved encrypted file: {}", filename);
-            return filename; // Возвращаем только имя файла (путь относительный)
+            return filename;
         } catch (IOException e) {
             logger.error("Failed to save file: {}", filename, e);
             throw e;

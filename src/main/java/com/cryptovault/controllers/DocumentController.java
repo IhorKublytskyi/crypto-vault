@@ -112,9 +112,6 @@ public class DocumentController {
 
             Resource resource = documentService.DecryptFile(documentId);
             String filename = document.getFilename();
-            String contentType = document.getContentType() != null
-                    ? document.getContentType()
-                    : MediaType.APPLICATION_OCTET_STREAM_VALUE;
             logger.info("Document decrypted successfully. Document ID: {}", documentId);
 
             return ResponseEntity.ok()

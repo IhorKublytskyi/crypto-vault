@@ -2,7 +2,6 @@ package com.cryptovault.services;
 
 import com.cryptovault.dtos.TimeResponse;
 import lombok.RequiredArgsConstructor;
-import org.hibernate.dialect.function.array.H2ArrayContainsFunction;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -19,7 +18,7 @@ public class TimeSchedulerService {
     private final SimpMessagingTemplate messagingTemplate;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 1000)
     public void fetchAndBroadcastTime() {
         String url = "http://worldtimeapi.org/api/timezone/Europe/Warsaw";
 
