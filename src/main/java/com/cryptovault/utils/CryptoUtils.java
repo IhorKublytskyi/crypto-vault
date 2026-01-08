@@ -1,6 +1,6 @@
 package com.cryptovault.utils;
 
-import com.cryptovault.datatransferobjects.EncryptedData;
+import com.cryptovault.dtos.EncryptedData;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;

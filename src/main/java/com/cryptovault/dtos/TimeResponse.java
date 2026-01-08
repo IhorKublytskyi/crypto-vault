@@ -6,6 +6,6 @@ import lombok.Data;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TimeResponse {
-    private String dateTime;
-    private String timeZone;
+    private String datetime;
+    private String timezone;
 }

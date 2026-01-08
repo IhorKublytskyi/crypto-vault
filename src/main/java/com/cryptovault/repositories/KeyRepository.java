@@ -27,7 +27,4 @@ public interface KeyRepository extends JpaRepository<Key, Long> {
 
     @Query (value = "SELECT type, COUNT(*) as count FROM keys WHERE user_id = :userId GROUP BY type", nativeQuery = true)
     List<Object[]> countKeysByTypeForUser(@Param("userId") Long userId);
-
-
-
 }

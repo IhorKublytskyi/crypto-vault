@@ -2,6 +2,11 @@ package com.cryptovault.services;
 
 import com.cryptovault.dtos.TimeResponse;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.dialect.function.array.H2ArrayContainsFunction;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -14,20 +19,24 @@ public class TimeSchedulerService {
     private final SimpMessagingTemplate messagingTemplate;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Scheduled(fixedRate = 5000, initialDelay = 5000)
+    @Scheduled(fixedRate = 5000)
     public void fetchAndBroadcastTime() {
-        String url = "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Warsaw";
+        String url = "http://worldtimeapi.org/api/timezone/Europe/Warsaw";
 
         try {
-            TimeResponse timeData = restTemplate.getForObject(url, TimeResponse.class);
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
 
-            if (timeData != null) {
-                System.out.println("Otzymano czas: " + timeData.getDateTime());
+            HttpEntity<String> entity = new HttpEntity<>(headers);
 
-                messagingTemplate.convertAndSend("/topic/time", timeData);
+            ResponseEntity<TimeResponse> response = restTemplate.exchange(url, HttpMethod.GET, entity, TimeResponse.class);
+
+            if (response.getBody() != null) {
+                System.out.println("Otrzymano czas: " + response.getBody().getDatetime());
+                messagingTemplate.convertAndSend("/topic/time", response.getBody());
             }
         } catch (Exception e) {
-            System.err.println("Podczas otrzymania czasu doszło do pomyłki: " + e.getMessage());
+            System.err.println("Podczas otrzymania czasu doszlo do pomylki: " + e.getMessage());
         }
     }
 }

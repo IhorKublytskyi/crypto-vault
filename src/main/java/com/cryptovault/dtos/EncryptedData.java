@@ -1,4 +1,4 @@
-package com.cryptovault.datatransferobjects;
+package com.cryptovault.dtos;
 
 public class EncryptedData {
     private final byte[] _ciphertext;

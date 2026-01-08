@@ -43,12 +43,9 @@ public class Key {
     @Enumerated(EnumType.STRING)
     private Algorithm algorithm;
 
-    @Lob // Large object
     @Column(name = "key_data", nullable = false, columnDefinition = "TEXT")
     private String keyData;
 
-    // Public part of the key RSA
-    @Lob
     @Column(name = "public_key_data", columnDefinition = "TEXT")
     private String publicKeyData;
 

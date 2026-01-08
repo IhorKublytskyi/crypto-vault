@@ -4,7 +4,7 @@ import com.cryptovault.abstractions.IDocumentRepository;
 import com.cryptovault.abstractions.IDocumentService;
 import com.cryptovault.abstractions.IKeyRepository;
 import com.cryptovault.abstractions.IFileStorageService;
-import com.cryptovault.datatransferobjects.EncryptedData;
+import com.cryptovault.dtos.EncryptedData;
 import com.cryptovault.models.Document;
 import com.cryptovault.models.Key;
 import com.cryptovault.utils.CryptoUtils;

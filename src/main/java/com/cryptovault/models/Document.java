@@ -46,7 +46,6 @@ public class Document {
     @Schema(description = "Authentication Tag (GCM) for integrity check", example = "xYz12...")
     private String tag;
 
-    @Lob
     @Column(name = "wrapped_key", nullable = false, columnDefinition = "TEXT")
     @Schema(description = "Encrypted AES key (Envelope encryption)", example = "Base64 string...")
     private String wrappedKey;

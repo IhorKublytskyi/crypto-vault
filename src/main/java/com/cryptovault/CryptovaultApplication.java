@@ -9,8 +9,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class CryptovaultApplication {
 
     public static void main(String[] args) {
-        System.out.println("Hello, world!");
         SpringApplication.run(CryptovaultApplication.class, args);
     }
-
 }
